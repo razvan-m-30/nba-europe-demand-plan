@@ -14,9 +14,10 @@ and a one-page memo. Keep code simple and readable. I need to explain the method
 assumptions and decisions, not individual lines of code.
 
 ## Stack and environment
-- OS: [fill in] · Python: [fill in version] · virtual env in `.venv/`
-- Libraries: pandas, duckdb, requests, matplotlib, scipy, openpyxl
-- Activate env: `[fill in, e.g. source .venv/bin/activate]`
+- OS: Windows 11 · Python: 3.13.1 · virtual env in `.venv/`
+- Libraries: pandas, duckdb, requests, matplotlib, scipy, openpyxl (pinned in `requirements.txt`)
+- Activate env: `.venv\Scripts\Activate.ps1` (PowerShell) or `source .venv/Scripts/activate` (Git Bash)
+- Install deps: `pip install -r requirements.txt`
 - Ask before installing any new package.
 
 ## Repo structure
