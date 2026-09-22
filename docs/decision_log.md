@@ -9,3 +9,5 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-09-22 | Analogs: Wembanyama draft, Paris 2024 Olympics, NBA games in Europe (2025–26) | Each captures a different demand mechanism |
 | 2026-09-22 | Olympics treated as upper bound | Olympic halo; France reached both finals |
 | 2026-09-22 | Paris 2025 games flagged as confounded | Marketed as Wembanyama's homecoming |
+| 2026-09-22 | Jan 2020 flagged as confound | Kobe Bryant's death dominates that week in 5 of 7 markets |
+| 2026-09-22 | 3+ day data gaps left NULL, not zero-filled | Avoids inventing a dip (it/nba, July 2026) |

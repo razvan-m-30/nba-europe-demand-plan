@@ -72,7 +72,8 @@ def load_joined(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def build_daily(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
-    """Full daily calendar per series (own min/max date), gaps filled with 0 views."""
+    """Full daily calendar per series (own min/max date). Missing days are NULL
+    views here; apply_gap_fill decides which ones become 0."""
     return con.execute("""
         WITH series_range AS (
             SELECT lang, country, topic, MIN(day) AS start_day, MAX(day) AS end_day
@@ -85,7 +86,7 @@ def build_daily(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
             FROM series_range
         )
         SELECT c.lang, c.country, c.topic, c.day,
-               COALESCE(j.views, 0) AS views,
+               j.views AS views,
                (j.day IS NULL) AS was_filled
         FROM calendar c
         LEFT JOIN joined j USING (lang, country, topic, day)
@@ -110,6 +111,21 @@ def find_gap_runs(missing_days: pd.Series) -> list[GapRun]:
         else:
             runs.append(GapRun(day, day, 1))
     return runs
+
+
+def apply_gap_fill(daily: pd.DataFrame) -> pd.DataFrame:
+    """Zero-fill isolated gaps (run length < GAP_CLUSTER_THRESHOLD). Longer runs
+    (3+ days, e.g. it/nba's July 2026 outage) are left NULL so they're excluded
+    from weekly sums rather than faked as zero interest."""
+    daily = daily.copy()
+    for (lang, country, topic), group in daily.groupby(["lang", "country", "topic"], sort=False):
+        missing_days = pd.to_datetime(group.loc[group["was_filled"], "day"]).dt.date
+        for run in find_gap_runs(missing_days):
+            if run.days < GAP_CLUSTER_THRESHOLD:
+                day_col = pd.to_datetime(group["day"]).dt.date
+                in_run = group.index[(day_col >= run.start) & (day_col <= run.end)]
+                daily.loc[in_run, "views"] = 0
+    return daily
 
 
 def report_gaps(daily: pd.DataFrame) -> list[str]:
@@ -149,7 +165,8 @@ def build_weekly_indexed(con: duckdb.DuckDBPyConnection, daily: pd.DataFrame) ->
                    date_trunc('week', day)::DATE AS week_start,
                    date_part('isoyear', day)::BIGINT AS iso_year,
                    date_part('week', day)::BIGINT AS iso_week,
-                   SUM(views) AS views
+                   SUM(views) AS views,
+                   COUNT(views) AS n_days
             FROM daily
             GROUP BY lang, country, topic, week_start, iso_year, iso_week
             HAVING COUNT(*) = 7
@@ -161,7 +178,8 @@ def build_weekly_indexed(con: duckdb.DuckDBPyConnection, daily: pd.DataFrame) ->
             GROUP BY lang, country, topic
         )
         SELECT w.week_start, w.iso_year, w.iso_week, w.lang, w.country, w.topic, w.views,
-               w.views / b.baseline_views * 100 AS "index"
+               w.views / b.baseline_views * 100 AS "index",
+               (w.n_days < 7) AS incomplete
         FROM weekly_raw w
         JOIN baseline b USING (lang, country, topic)
         ORDER BY w.lang, w.topic, w.week_start
@@ -196,9 +214,11 @@ def plot_sanity_chart(weekly: pd.DataFrame, topic: str, out_path: Path) -> None:
             color="#52514e",
         )
 
+    ax.set_yscale("log")
     ax.set_title(f"Wikipedia interest sanity check -- {topic}", color="#0b0b0b")
-    ax.set_ylabel("Index (2019 weekly average = 100)", color="#52514e")
-    ax.grid(True, color="#e1e0d9", linewidth=0.8)
+    ax.set_ylabel("Index (2019 weekly average = 100, log scale)", color="#52514e")
+    ax.grid(True, which="major", color="#e1e0d9", linewidth=0.8)
+    ax.grid(True, which="minor", color="#e1e0d9", linewidth=0.4)
     ax.spines[["top", "right"]].set_visible(False)
     ax.spines[["left", "bottom"]].set_color("#c3c2b7")
     ax.tick_params(colors="#898781")
@@ -206,6 +226,49 @@ def plot_sanity_chart(weekly: pd.DataFrame, topic: str, out_path: Path) -> None:
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
+
+
+PEAK_WEEKS = [date(2020, 11, 9), date(2022, 10, 31)]
+
+
+def turkey_diagnostic(weekly: pd.DataFrame) -> list[str]:
+    """2019 baseline stability check for tr (both topics), with nl as a small-market
+    comparison, plus tr's raw weekly views at the two index peak weeks. Diagnostic
+    only -- doesn't change any data."""
+    lines = []
+    for lang, label in (("tr", "Turkey"), ("nl", "Netherlands")):
+        for topic in ("basketball", "nba"):
+            views_2019 = weekly.loc[
+                (weekly["lang"] == lang) & (weekly["topic"] == topic) & (weekly["iso_year"] == 2019),
+                "views",
+            ].dropna()
+            lowest = [f"{v:.0f}" for v in views_2019.sort_values().head(5)]
+            lines.append(
+                f"{label}/{topic} 2019 weekly views: total={views_2019.sum():.0f}  "
+                f"mean={views_2019.mean():.1f}  median={views_2019.median():.1f}"
+            )
+            lines.append(f"  5 lowest weeks: {', '.join(lowest)}")
+            if lang == "tr":
+                stable = views_2019.median() >= 100
+                verdict = (
+                    "median >= ~100 -> baseline can support a reasonably stable index"
+                    if stable
+                    else "median < ~100 -> baseline is too thin, index for this series is unreliable"
+                )
+                lines.append(f"  stability check: {verdict}")
+
+    lines.append("")
+    lines.append("Turkey raw weekly views at the two index peak weeks:")
+    for topic in ("basketball", "nba"):
+        for peak in PEAK_WEEKS:
+            row = weekly[
+                (weekly["lang"] == "tr")
+                & (weekly["topic"] == topic)
+                & (weekly["week_start"].dt.date == peak)
+            ]
+            if not row.empty:
+                lines.append(f"  tr/{topic} week of {peak}: views={row['views'].iloc[0]:.0f}")
+    return lines
 
 
 def print_summary(daily: pd.DataFrame, weekly: pd.DataFrame, gap_lines: list[str]) -> None:
@@ -220,6 +283,14 @@ def print_summary(daily: pd.DataFrame, weekly: pd.DataFrame, gap_lines: list[str
     print("\n=== Weekly table ===")
     print(f"Rows: {len(weekly)}")
     print(f"Week range: {weekly['week_start'].min()} -> {weekly['week_start'].max()}")
+    n_incomplete = int(weekly["incomplete"].sum())
+    print(f"Incomplete rows (built from < 7 non-null days): {n_incomplete}")
+    if n_incomplete:
+        for _, row in weekly[weekly["incomplete"]].iterrows():
+            print(
+                f"  {row['lang']}/{row['topic']} week of {row['week_start'].date()}: "
+                f"views={row['views']}"
+            )
 
     print("\n=== Highest-index week per country ===")
     for topic in ("basketball", "nba"):
@@ -244,6 +315,7 @@ def main() -> None:
 
     daily = build_daily(con)
     gap_lines = report_gaps(daily)
+    daily = apply_gap_fill(daily)
 
     weekly = build_weekly_indexed(con, daily)
     weekly.to_parquet(WEEKLY_PARQUET, index=False)
@@ -252,6 +324,9 @@ def main() -> None:
     plot_sanity_chart(weekly, "nba", CHARTS_DIR / "sanity_nba.png")
 
     print_summary(daily, weekly, gap_lines)
+    print("\n=== Turkey diagnostic ===")
+    for line in turkey_diagnostic(weekly):
+        print(line)
 
 
 if __name__ == "__main__":
