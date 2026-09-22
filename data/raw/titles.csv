@@ -1,0 +1,15 @@
+lang,country,topic,input_title,canonical_title,redirected,missing
+en,UK,basketball,Basketball,Basketball,False,False
+en,UK,nba,NBA,National Basketball Association,True,False
+fr,France,basketball,Basket-ball,Basket-ball,False,False
+fr,France,nba,National Basketball Association,National Basketball Association,False,False
+es,Spain,basketball,Baloncesto,Baloncesto,False,False
+es,Spain,nba,NBA,National Basketball Association,True,False
+it,Italy,basketball,Pallacanestro,Pallacanestro,False,False
+it,Italy,nba,NBA,NBA,False,False
+de,Germany,basketball,Basketball,Basketball,False,False
+de,Germany,nba,National Basketball Association,National Basketball Association,False,False
+tr,Turkey,basketball,Basketbol,Basketbol,False,False
+tr,Turkey,nba,NBA,National Basketball Association,True,False
+nl,Netherlands,basketball,Basketbal,Basketbal,False,False
+nl,Netherlands,nba,NBA,NBA,False,False
