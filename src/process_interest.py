@@ -25,6 +25,11 @@ WEEKLY_PARQUET = PROCESSED_DIR / "weekly_interest.parquet"
 GAP_CLUSTER_THRESHOLD = 3
 GAP_REPORT_SERIES = [("it", "nba"), ("nl", "nba")]
 
+# Winsorize: cap a day above WINSORIZE_MULTIPLIER x its trailing median at that cap.
+WINSORIZE_MULTIPLIER = 5
+TRAILING_MEDIAN_WEEKS = 8
+CAPPED_DAYS_CSV = ROOT / "outputs" / "capped_days.csv"
+
 # Fixed categorical color order (validated palette, dataviz skill default),
 # assigned by language so each country keeps the same color across charts.
 COUNTRY_COLORS = {
@@ -128,6 +133,36 @@ def apply_gap_fill(daily: pd.DataFrame) -> pd.DataFrame:
     return daily
 
 
+def winsorize_daily(daily: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Cap any day above WINSORIZE_MULTIPLIER x its trailing median (the preceding
+    TRAILING_MEDIAN_WEEKS*7 days, per series) at that cap. A day with no trailing
+    history yet, or a trailing median of 0, is left uncapped -- there's no baseline
+    to judge it against. Returns (daily_with_caps_applied, capped_days_log)."""
+    daily = daily.sort_values(["lang", "country", "topic", "day"]).reset_index(drop=True)
+    daily["views"] = daily["views"].astype("float64")
+    window_days = TRAILING_MEDIAN_WEEKS * 7
+    trailing_median = (
+        daily.groupby(["lang", "country", "topic"])["views"]
+        .apply(lambda s: s.rolling(window_days, min_periods=1).median().shift(1))
+        .reset_index(level=[0, 1, 2], drop=True)
+    )
+    cap = trailing_median * WINSORIZE_MULTIPLIER
+    exceeds = (daily["views"] > cap) & (cap > 0)
+
+    capped_log = pd.DataFrame(
+        {
+            "series": daily.loc[exceeds, "lang"] + "/" + daily.loc[exceeds, "topic"],
+            "date": daily.loc[exceeds, "day"],
+            "raw": daily.loc[exceeds, "views"],
+            "capped": cap[exceeds],
+        }
+    ).reset_index(drop=True)
+
+    daily = daily.copy()
+    daily.loc[exceeds, "views"] = cap[exceeds]
+    return daily, capped_log
+
+
 def report_gaps(daily: pd.DataFrame) -> list[str]:
     """Build the missing-date report lines for the flagged series."""
     lines = []
@@ -179,7 +214,8 @@ def build_weekly_indexed(con: duckdb.DuckDBPyConnection, daily: pd.DataFrame) ->
         )
         SELECT w.week_start, w.iso_year, w.iso_week, w.lang, w.country, w.topic, w.views,
                w.views / b.baseline_views * 100 AS "index",
-               (w.n_days < 7) AS incomplete
+               (w.n_days < 7) AS incomplete,
+               (w.lang = 'nl' AND w.topic = 'basketball') AS use_as_control
         FROM weekly_raw w
         JOIN baseline b USING (lang, country, topic)
         ORDER BY w.lang, w.topic, w.week_start
@@ -228,9 +264,6 @@ def plot_sanity_chart(weekly: pd.DataFrame, topic: str, out_path: Path) -> None:
     plt.close(fig)
 
 
-PEAK_WEEKS = [date(2020, 11, 9), date(2022, 10, 31)]
-
-
 def turkey_diagnostic(weekly: pd.DataFrame) -> list[str]:
     """2019 baseline stability check for tr (both topics), with nl as a small-market
     comparison, plus tr's raw weekly views at the two index peak weeks. Diagnostic
@@ -258,16 +291,16 @@ def turkey_diagnostic(weekly: pd.DataFrame) -> list[str]:
                 lines.append(f"  stability check: {verdict}")
 
     lines.append("")
-    lines.append("Turkey raw weekly views at the two index peak weeks:")
+    lines.append("Turkey raw weekly views at the current index peak week per topic:")
     for topic in ("basketball", "nba"):
-        for peak in PEAK_WEEKS:
-            row = weekly[
-                (weekly["lang"] == "tr")
-                & (weekly["topic"] == topic)
-                & (weekly["week_start"].dt.date == peak)
-            ]
-            if not row.empty:
-                lines.append(f"  tr/{topic} week of {peak}: views={row['views'].iloc[0]:.0f}")
+        tr_topic = weekly[(weekly["lang"] == "tr") & (weekly["topic"] == topic)]
+        if tr_topic.empty:
+            continue
+        peak = tr_topic.loc[tr_topic["index"].idxmax()]
+        lines.append(
+            f"  tr/{topic} week of {peak['week_start'].date()}: "
+            f"views={peak['views']:.0f}  index={peak['index']:.1f}"
+        )
     return lines
 
 
@@ -316,6 +349,8 @@ def main() -> None:
     daily = build_daily(con)
     gap_lines = report_gaps(daily)
     daily = apply_gap_fill(daily)
+    daily, capped_log = winsorize_daily(daily)
+    capped_log.to_csv(CAPPED_DAYS_CSV, index=False)
 
     weekly = build_weekly_indexed(con, daily)
     weekly.to_parquet(WEEKLY_PARQUET, index=False)
@@ -324,6 +359,11 @@ def main() -> None:
     plot_sanity_chart(weekly, "nba", CHARTS_DIR / "sanity_nba.png")
 
     print_summary(daily, weekly, gap_lines)
+    print("\n=== Winsorized days (capped at 5x trailing 8-week median) ===")
+    print(f"Total capped: {len(capped_log)}")
+    if len(capped_log):
+        for series, count in capped_log["series"].value_counts().sort_index().items():
+            print(f"  {series}: {count}")
     print("\n=== Turkey diagnostic ===")
     for line in turkey_diagnostic(weekly):
         print(line)
