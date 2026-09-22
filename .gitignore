@@ -16,6 +16,7 @@ env/
 # Data caches (regenerable; keep raw/processed empty in git, data stays local)
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/titles.csv
 data/processed/*
 !data/processed/.gitkeep
 
