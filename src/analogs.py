@@ -154,22 +154,32 @@ def compute_row(
     persistence_week = end_week + pd.Timedelta(weeks=PERSISTENCE_WEEKS)
     persistence_12w = safe_uplift(series["index"].get(persistence_week), baseline)
 
-    control_peak = control_uplift_at(peak_week, event, topic, series_map, baselines)
-    control_persist = control_uplift_at(persistence_week, event, topic, series_map, baselines)
-    net_peak_uplift = peak_uplift - control_peak if pd.notna(peak_uplift) else float("nan")
-    net_persistence_12w = (
-        persistence_12w - control_persist if pd.notna(persistence_12w) else float("nan")
-    )
-
     def nl_uplift_at(week: pd.Timestamp | None) -> float:
         if week is None:
             return float("nan")
         return safe_uplift(nl_series["index"].get(week), nl_baseline)
 
-    net_peak_vs_nl = peak_uplift - nl_uplift_at(peak_week) if pd.notna(peak_uplift) else float("nan")
-    net_persistence_vs_nl = (
-        persistence_12w - nl_uplift_at(persistence_week) if pd.notna(persistence_12w) else float("nan")
+    def net_of(exposed_up: float, control_up: float) -> float:
+        return exposed_up - control_up if pd.notna(exposed_up) and pd.notna(control_up) else float("nan")
+
+    # Net uplift, week by week: exposed uplift minus control uplift in the SAME
+    # week. net_peak_uplift is the max of that net series (not the exposed
+    # country's own peak week re-netted) -- the week where the gap vs. control is
+    # largest need not be the same week the exposed country itself peaked.
+    net_window = pd.Series(
+        {
+            wk: net_of(uplift_window[wk], control_uplift_at(wk, event, topic, series_map, baselines))
+            for wk in window_weeks
+        }
     )
+    net_peak_uplift = net_window.max() if net_window.notna().any() else float("nan")
+    net_persistence_12w = net_of(
+        persistence_12w, control_uplift_at(persistence_week, event, topic, series_map, baselines)
+    )
+
+    net_window_vs_nl = pd.Series({wk: net_of(uplift_window[wk], nl_uplift_at(wk)) for wk in window_weeks})
+    net_peak_vs_nl = net_window_vs_nl.max() if net_window_vs_nl.notna().any() else float("nan")
+    net_persistence_vs_nl = net_of(persistence_12w, nl_uplift_at(persistence_week))
 
     return {
         "event_id": event.event_id,
