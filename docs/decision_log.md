@@ -14,3 +14,6 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-09-22 | Turkey kept; single-day outliers capped at 5x trailing median | 2020-11-14 spike was one isolated day; rest of tr data is stable (2019 median ~270/wk) |
 | 2026-09-22 | Control = nl/basketball only | nl/nba too small (median 63 views/wk) to be stable |
 | 2026-09-22 | National-team success is the largest observed shock | DE 2023 World Cup, TR EuroBasket 2025, FR Olympics 2024 all exceed any NBA event |
+| 2026-09-28 | Events split into NBA events (scenario inputs) and national-team events (ceiling); Olympics moved to national-team | Olympics is a national-team tournament; NL rose as much as FR |
+| 2026-09-28 | Exposed market fixed in advance per event | Avoids picking the market that happened to spike |
+| 2026-09-28 | Tournament baselines end before tournament start | Keeps build-up out of the baseline |
