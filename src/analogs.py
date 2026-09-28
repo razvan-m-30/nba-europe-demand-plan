@@ -22,13 +22,14 @@ BASELINE_WEEKS = 8
 PEAK_WINDOW_EXTRA_WEEKS = 4
 HALF_LIFE_MAX_WEEKS = 26
 PERSISTENCE_WEEKS = 12
-CONTROL_COUNTRY, CONTROL_TOPIC = "Netherlands", "basketball"
+NL_COUNTRY, NL_TOPIC = "Netherlands", "basketball"  # secondary NL-only check, kept for comparison
 
 COUNTRIES = ["UK", "France", "Spain", "Italy", "Germany", "Turkey", "Netherlands"]
 TOPICS = ["basketball", "nba"]
 
 CHART_WEEKS_BEFORE = 8
 CHART_WEEKS_AFTER = 16
+EXPOSED_COLORS = ["#2a78d6", "#eb6834"]
 
 
 @dataclass
@@ -38,20 +39,21 @@ class Event:
     group: str
     event_start: date
     event_end: date
-    exposed_country: str
+    exposed_countries: tuple[str, ...]
 
 
 # T2's tournament start date is verified: the 2023 FIBA Basketball World Cup ran
 # 2023-08-25 to 2023-09-10 (confirmed via web search against Wikipedia/FIBA), which
 # matches the fallback date given in the brief -- not left UNVERIFIED.
+# T1: NL counts as exposed too -- it won men's 3x3 Olympic gold on 2024-08-05.
 EVENTS = [
-    Event("N1", "wembanyama_draft", "nba_event", date(2023, 6, 22), date(2023, 6, 22), "France"),
-    Event("N2", "nba_paris_2025", "nba_event", date(2025, 1, 23), date(2025, 1, 25), "France"),
-    Event("N3", "nba_berlin_2026", "nba_event", date(2026, 1, 15), date(2026, 1, 15), "Germany"),
-    Event("N4", "nba_london_2026", "nba_event", date(2026, 1, 18), date(2026, 1, 18), "UK"),
-    Event("T1", "paris_olympics", "national_team", date(2024, 7, 27), date(2024, 8, 11), "France"),
-    Event("T2", "fiba_wc_2023", "national_team", date(2023, 8, 25), date(2023, 9, 10), "Germany"),
-    Event("T3", "eurobasket_2025", "national_team", date(2025, 8, 27), date(2025, 9, 14), "Turkey"),
+    Event("N1", "wembanyama_draft", "nba_event", date(2023, 6, 22), date(2023, 6, 22), ("France",)),
+    Event("N2", "nba_paris_2025", "nba_event", date(2025, 1, 23), date(2025, 1, 25), ("France",)),
+    Event("N3", "nba_berlin_2026", "nba_event", date(2026, 1, 15), date(2026, 1, 15), ("Germany",)),
+    Event("N4", "nba_london_2026", "nba_event", date(2026, 1, 18), date(2026, 1, 18), ("UK",)),
+    Event("T1", "paris_olympics", "national_team", date(2024, 7, 27), date(2024, 8, 11), ("France", "Netherlands")),
+    Event("T2", "fiba_wc_2023", "national_team", date(2023, 8, 25), date(2023, 9, 10), ("Germany",)),
+    Event("T3", "eurobasket_2025", "national_team", date(2025, 8, 27), date(2025, 9, 14), ("Turkey",)),
 ]
 
 
@@ -82,26 +84,49 @@ def safe_uplift(value: float | None, baseline: float | None) -> float:
 
 
 def compute_baseline(series: pd.DataFrame, event_week: pd.Timestamp) -> float:
-    """Mean index of the 8 full weeks before event_week, excluding incomplete weeks."""
+    """Median index of the 8 full weeks before event_week, excluding incomplete weeks."""
     baseline_weeks = [event_week - pd.Timedelta(weeks=i) for i in range(1, BASELINE_WEEKS + 1)]
     rows = series.reindex(baseline_weeks)
     complete = rows[~rows["incomplete"].fillna(True)]
     valid = complete["index"].dropna()
-    return valid.mean() if len(valid) else float("nan")
+    return valid.median() if len(valid) else float("nan")
+
+
+def unexposed_countries(event: Event) -> list[str]:
+    return [c for c in COUNTRIES if c not in event.exposed_countries]
+
+
+def control_uplift_at(
+    week: pd.Timestamp | None,
+    event: Event,
+    topic: str,
+    series_map: dict[str, pd.DataFrame],
+    baselines: dict[str, float],
+) -> float:
+    """Median uplift, at `week`, across markets NOT exposed to this event (same topic)."""
+    if week is None:
+        return float("nan")
+    values = [
+        safe_uplift(series_map[c]["index"].get(week), baselines[c])
+        for c in unexposed_countries(event)
+    ]
+    values = [v for v in values if pd.notna(v)]
+    return float(pd.Series(values).median()) if values else float("nan")
 
 
 def compute_row(
-    weekly: pd.DataFrame,
     event: Event,
     country: str,
     topic: str,
-    control_series: pd.DataFrame,
-    control_baseline: float,
+    series_map: dict[str, pd.DataFrame],
+    baselines: dict[str, float],
+    nl_series: pd.DataFrame,
+    nl_baseline: float,
 ) -> dict:
-    series = series_for(weekly, country, topic)
+    series = series_map[country]
+    baseline = baselines[country]
     event_week = week_start_of(event.event_start)
     end_week = week_start_of(event.event_end)
-    baseline = compute_baseline(series, event_week)
 
     peak_end_week = end_week + pd.Timedelta(weeks=PEAK_WINDOW_EXTRA_WEEKS)
     window_weeks = pd.date_range(event_week, peak_end_week, freq="7D")
@@ -129,18 +154,21 @@ def compute_row(
     persistence_week = end_week + pd.Timedelta(weeks=PERSISTENCE_WEEKS)
     persistence_12w = safe_uplift(series["index"].get(persistence_week), baseline)
 
-    def control_uplift_at(week: pd.Timestamp | None) -> float:
+    control_peak = control_uplift_at(peak_week, event, topic, series_map, baselines)
+    control_persist = control_uplift_at(persistence_week, event, topic, series_map, baselines)
+    net_peak_uplift = peak_uplift - control_peak if pd.notna(peak_uplift) else float("nan")
+    net_persistence_12w = (
+        persistence_12w - control_persist if pd.notna(persistence_12w) else float("nan")
+    )
+
+    def nl_uplift_at(week: pd.Timestamp | None) -> float:
         if week is None:
             return float("nan")
-        return safe_uplift(control_series["index"].get(week), control_baseline)
+        return safe_uplift(nl_series["index"].get(week), nl_baseline)
 
-    net_peak_uplift = (
-        peak_uplift - control_uplift_at(peak_week) if pd.notna(peak_uplift) else float("nan")
-    )
-    net_persistence_12w = (
-        persistence_12w - control_uplift_at(persistence_week)
-        if pd.notna(persistence_12w)
-        else float("nan")
+    net_peak_vs_nl = peak_uplift - nl_uplift_at(peak_week) if pd.notna(peak_uplift) else float("nan")
+    net_persistence_vs_nl = (
+        persistence_12w - nl_uplift_at(persistence_week) if pd.notna(persistence_12w) else float("nan")
     )
 
     return {
@@ -149,25 +177,42 @@ def compute_row(
         "group": event.group,
         "country": country,
         "topic": topic,
-        "exposed": country == event.exposed_country,
+        "exposed": country in event.exposed_countries,
         "baseline": baseline,
         "peak_uplift": peak_uplift,
         "half_life_weeks": half_life_weeks,
         "persistence_12w": persistence_12w,
         "net_peak_uplift": net_peak_uplift,
         "net_persistence_12w": net_persistence_12w,
+        "net_peak_vs_nl": net_peak_vs_nl,
+        "net_persistence_vs_nl": net_persistence_vs_nl,
     }
 
 
 def build_table(weekly: pd.DataFrame) -> pd.DataFrame:
+    series_by_topic = {topic: {c: series_for(weekly, c, topic) for c in COUNTRIES} for topic in TOPICS}
+    nl_full_series = series_for(weekly, NL_COUNTRY, NL_TOPIC)
+
     rows = []
     for event in EVENTS:
-        control_series = series_for(weekly, CONTROL_COUNTRY, CONTROL_TOPIC)
-        control_baseline = compute_baseline(control_series, week_start_of(event.event_start))
-        for country in COUNTRIES:
-            for topic in TOPICS:
+        event_week = week_start_of(event.event_start)
+        baselines_by_topic = {
+            topic: {c: compute_baseline(series_by_topic[topic][c], event_week) for c in COUNTRIES}
+            for topic in TOPICS
+        }
+        nl_baseline = compute_baseline(nl_full_series, event_week)
+        for topic in TOPICS:
+            for country in COUNTRIES:
                 rows.append(
-                    compute_row(weekly, event, country, topic, control_series, control_baseline)
+                    compute_row(
+                        event,
+                        country,
+                        topic,
+                        series_by_topic[topic],
+                        baselines_by_topic[topic],
+                        nl_full_series,
+                        nl_baseline,
+                    )
                 )
     return pd.DataFrame(rows)
 
@@ -180,6 +225,9 @@ def plot_event_chart(weekly: pd.DataFrame, event: Event, out_path: Path) -> None
     weeks = pd.date_range(start_window, end_window, freq="7D")
     offsets = [(wk - event_week).days / 7 for wk in weeks]
 
+    series_map = {c: series_for(weekly, c, "basketball") for c in COUNTRIES}
+    baselines = {c: compute_baseline(series_map[c], event_week) for c in COUNTRIES}
+
     fig, ax = plt.subplots(figsize=(10, 6), facecolor="#fcfcfb")
     ax.set_facecolor("#fcfcfb")
 
@@ -187,22 +235,31 @@ def plot_event_chart(weekly: pd.DataFrame, event: Event, out_path: Path) -> None
     ax.axvspan(0, end_offset + 1, color="#c3c2b7", alpha=0.25, zorder=0)
 
     other_line = None
+    color_i = 0
     for country in COUNTRIES:
-        series = series_for(weekly, country, "basketball")
-        values = [series["index"].get(wk) for wk in weeks]
-        if country == event.exposed_country:
-            ax.plot(offsets, values, linewidth=2.5, color="#2a78d6", label=country, zorder=3)
-        elif country == "Netherlands":
-            ax.plot(
-                offsets, values, linewidth=1.5, color="#0b0b0b", linestyle="--",
-                label="Netherlands (control)", zorder=2,
-            )
+        values = [series_map[country]["index"].get(wk) for wk in weeks]
+        if country in event.exposed_countries:
+            color = EXPOSED_COLORS[color_i % len(EXPOSED_COLORS)]
+            color_i += 1
+            ax.plot(offsets, values, linewidth=2.5, color=color, label=country, zorder=3)
         else:
             (line,) = ax.plot(offsets, values, linewidth=1, color="#c3c2b7", zorder=1)
             other_line = other_line or line
 
     if other_line is not None:
         other_line.set_label("Other markets")
+
+    # Control: median uplift across unexposed markets, displayed as a synthetic
+    # index (100 x (1 + uplift)) so it sits on the same baseline=100 scale as
+    # every country's own index line.
+    control_display = [
+        100 * (1 + control_uplift_at(wk, event, "basketball", series_map, baselines))
+        for wk in weeks
+    ]
+    ax.plot(
+        offsets, control_display, linewidth=1.5, color="#0b0b0b", linestyle="--",
+        label="Control (median, unexposed markets)", zorder=2,
+    )
 
     date_label = (
         f"{event.event_start}" if event.event_start == event.event_end

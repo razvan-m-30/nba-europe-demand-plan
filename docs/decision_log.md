@@ -17,3 +17,5 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-09-28 | Events split into NBA events (scenario inputs) and national-team events (ceiling); Olympics moved to national-team | Olympics is a national-team tournament; NL rose as much as FR |
 | 2026-09-28 | Exposed market fixed in advance per event | Avoids picking the market that happened to spike |
 | 2026-09-28 | Tournament baselines end before tournament start | Keeps build-up out of the baseline |
+| 2026-09-28 | Baseline = median of 8 pre-event weeks | Mean was distorted by a May 2023 FR domestic-league spike |
+| 2026-09-28 | Control = median of unexposed markets per event, not NL alone | NL had its own shocks (3x3 Olympic gold Aug 2024) |
