@@ -22,7 +22,7 @@ Main deliverable: a memo a non-technical reader can follow (recommendation first
 - Gaps: runs of 1-2 missing days filled with 0. Runs of 3+ left NULL, week flagged `incomplete` (it/nba, July 2026).
 - Outliers: daily views capped at 5x the trailing 8-week median. Capped days listed in `outputs/capped_days.csv`.
 - Baseline: median of 8 pre-event weeks.
-- Control: median uplift of all markets not exposed to the event (NL counts as exposed for the Paris Olympics). NL-only kept as a secondary check.
+- Control: median uplift of markets not exposed to the event, week by week; NL counts as exposed for the Paris Olympics; NL-only kept as a secondary check.
 - Turkey is kept (2019 baseline is stable, ~270 views/wk).
 - Jan 2020 is a confound (Kobe Bryant's death). Do not use it in baselines.
 
