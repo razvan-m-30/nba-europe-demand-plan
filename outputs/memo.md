@@ -21,7 +21,7 @@ Three issues surfaced while building this analysis, and are reflected in the num
 
 **1. Wembanyama draft: no measurable short-term effect.** Its 8-week pre-event baseline had averaged in an unrelated May 2023 French domestic-league spike, inflating the baseline so every later week looked like a decline; using the median of the 8 weeks instead of the mean fixed that (peak uplift: -48.8% → -44.2%). But the corrected number still isn't a real signal: the draft falls at the seasonal low point right after the May league finals, and a slow, season-long build from a star playing weekly is not something this event-study method can capture. It is excluded from scenario inputs.
 
-**2. Paris Olympics barely beat its control.** The control market, the Netherlands, wasn't neutral. Dutch interest peaked on 6 August, the day after the Netherlands won 3x3 gold, and stayed high through the Olympic basketball finals. We reclassified the Netherlands as exposed, a call made after seeing the data rather than before. Fix: net France's peak against markets not exposed to the Games. Net peak uplift: -114.1% → +217.9%.
+**2. Paris Olympics showed France below its control.** The control market, the Netherlands, wasn't neutral. Dutch interest peaked on 6 August, the day after the Netherlands won 3x3 gold, and stayed high through the Olympic basketball finals. We reclassified the Netherlands as exposed, a call made after seeing the data rather than before. Fix: net France's peak against markets not exposed to the Games. Net peak uplift: -114.1% → +217.9%.
 
 **3. One control market is fragile.** Relying on the Netherlands alone meant every event's net number rode on one country's noise. Fix: use the median uplift across all unexposed markets instead. For the Berlin NBA game, net peak uplift: -30.8% → +26.1%.
 
@@ -33,7 +33,7 @@ Basketball topic, exposed market only.
 
 | Event | Exposed market | Peak uplift | Half-life | Persistence (12w) | Net peak | Net persistence |
 |---|---|---|---|---|---|---|
-| Wembanyama draft | France | -44.2% | 1 week | -43.9% | -7.1% | -13.4% |
+| Wembanyama draft (excluded, see above) | France | -44.2% | 1 week | -43.9% | -7.1% | -13.4% |
 | NBA Paris Game | France | +7.3% | 1 week | -28.4% | -11.2% | -4.3% |
 | NBA Berlin Game | Germany | +27.3% | 2 weeks | +6.4% | +26.1% | +17.3% |
 | NBA London Game | UK | +26.9% | 3 weeks | -11.8% | +30.6% | -2.4% |
@@ -42,7 +42,7 @@ Basketball topic, exposed market only.
 | FIBA World Cup 2023 | Germany | +268.2% | 1 week | +83.4% | +228.5% | -33.8% |
 | EuroBasket 2025 | Turkey | +491.3% | 5 weeks | +323.7% | +443.6% | +270.2% |
 
-National-team events show far larger and more durable uplifts than NBA-league events on every metric here — peak, net peak, and (mostly) persistence. National-team peaks are consistently large, but 12-week persistence is mixed — high for France and Turkey, negative for Germany — and partly seasonal.
+Every national-team event produced a net peak at least seven times larger than any NBA event (+218% at minimum vs +31% at most). Whether the uplift lasts is less clear: 12-week persistence is high for France and Turkey, negative for Germany, and partly seasonal. Half-lives are short in both groups: most uplift fades within one to three weeks.
 
 ## Reading the results with care
 
@@ -66,3 +66,7 @@ The NBA has already committed to regular-season games in Manchester and Paris in
 - NBA, Paris Games 2025: https://nbaevents.nba.com/paris-games-2025
 - NBA.com, games in Europe 2026–2028 announcement: https://www.nba.com/news/nba-announces-3-year-slate-of-games-in-europe-beginning-in-2026
 - Wikipedia, 2023 FIBA Basketball World Cup (tournament dates verified 2023-08-25 to 2023-09-10): https://en.wikipedia.org/wiki/2023_FIBA_Basketball_World_Cup
+- NBA.com, Berlin Game 2026 primer: https://www.nba.com/news/nba-berlin-game-primer-2026
+- NBA.com, London Game 2026 preview: https://www.nba.com/news/nba-london-game-2026-everything-to-know
+- Wikipedia, EuroBasket 2025: https://en.wikipedia.org/wiki/EuroBasket_2025
+- Wikipedia, Men's 3x3 at the 2024 Olympics (NL gold, 5 Aug 2024): https://en.wikipedia.org/wiki/Basketball_at_the_2024_Summer_Olympics_%E2%80%93_Men%27s_3x3_tournament
