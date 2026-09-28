@@ -21,3 +21,4 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-09-28 | Control = median of unexposed markets per event, not NL alone | NL had its own shocks (3x3 Olympic gold Aug 2024) |
 | 2026-09-28 | Control = median of unexposed markets, net computed week by week | A single control market (NL) had its own shocks |
 | 2026-09-28 | NL treated as exposed for Paris 2024 (decided after seeing the data) | NL won men's 3x3 Olympic gold on 5 Aug 2024; should have been caught upfront |
+| 2026-09-28 | Wembanyama draft excluded from scenario inputs | Falls at seasonal low; no measurable short-term effect |

@@ -19,9 +19,9 @@ NBA Europe has no demand history: a sustained NBA-backed league has never operat
 
 Three issues surfaced while building this analysis, and are reflected in the numbers below.
 
-**1. Wembanyama draft looked negative.** Its 8-week pre-event baseline averaged in an unrelated May 2023 French domestic-league spike, inflating the baseline so every later week looked like a decline. Fix: use the median of the 8 weeks, not the mean. Peak uplift: -48.8% → -44.2%.
+**1. Wembanyama draft: no measurable short-term effect.** Its 8-week pre-event baseline had averaged in an unrelated May 2023 French domestic-league spike, inflating the baseline so every later week looked like a decline; using the median of the 8 weeks instead of the mean fixed that (peak uplift: -48.8% → -44.2%). But the corrected number still isn't a real signal: the draft falls at the seasonal low point right after the May league finals, and a slow, season-long build from a star playing weekly is not something this event-study method can capture. It is excluded from scenario inputs.
 
-**2. Paris Olympics barely beat its control.** The control market, the Netherlands, wasn't neutral — it won men's 3x3 Olympic gold, and Dutch interest stayed elevated through the back half of the Games, pointing to general Olympic interest rather than one medal moment. We reclassified the Netherlands as exposed, a call made after seeing the data rather than before. Fix: net France's peak against markets not exposed to the Games. Net peak uplift: -114.1% → +217.9%.
+**2. Paris Olympics barely beat its control.** The control market, the Netherlands, wasn't neutral. Dutch interest peaked on 6 August, the day after the Netherlands won 3x3 gold, and stayed high through the Olympic basketball finals. We reclassified the Netherlands as exposed, a call made after seeing the data rather than before. Fix: net France's peak against markets not exposed to the Games. Net peak uplift: -114.1% → +217.9%.
 
 **3. One control market is fragile.** Relying on the Netherlands alone meant every event's net number rode on one country's noise. Fix: use the median uplift across all unexposed markets instead. For the Berlin NBA game, net peak uplift: -30.8% → +26.1%.
 
@@ -42,7 +42,7 @@ Basketball topic, exposed market only.
 | FIBA World Cup 2023 | Germany | +268.2% | 1 week | +83.4% | +228.5% | -33.8% |
 | EuroBasket 2025 | Turkey | +491.3% | 5 weeks | +323.7% | +443.6% | +270.2% |
 
-National-team events show far larger and more durable uplifts than NBA-league events on every metric here — peak, net peak, and (mostly) persistence.
+National-team events show far larger and more durable uplifts than NBA-league events on every metric here — peak, net peak, and (mostly) persistence. National-team peaks are consistently large, but 12-week persistence is mixed — high for France and Turkey, negative for Germany — and partly seasonal.
 
 ## Reading the results with care
 
