@@ -337,44 +337,6 @@ def classify(player_peak_uplift: float, league_peak_uplift: float) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Placebo weeks: 3 ordinary regular-season weeks per player, same season as
-# their event, >=4 weeks from the event week, clear of NBA All-Star weekend
-# (2025: Feb 14-16 SF; 2026: Feb 13-15 Inglewood -- both verified via web
-# search) and the February trade deadline. All chosen with >=8 weeks of
-# pageview history behind them (data starts 2024-10-01).
-# ---------------------------------------------------------------------------
-
-PLACEBO_WEEKS: dict[str, list[date]] = {
-    # Originally 2025-03-03/17/31, but Wembanyama was ruled out for the rest
-    # of the season on 2025-02-20 (deep vein thrombosis, diagnosed right
-    # after All-Star weekend) -- confirmed via web search. He wasn't playing
-    # in any of those weeks, and the injury-news spike sits inside their
-    # 8-week baseline windows, so they're invalid. See PLACEBO_NOTE.
-    "wembanyama": [],
-    # N3 event week is 2026-01-12; season 2025-26. Picked from well before
-    # the Dec 15 buffer (early/mid season) and once after the Feb 9 buffer.
-    "franz_wagner": [date(2025, 10, 20), date(2025, 11, 17), date(2026, 3, 2)],
-    "moritz_wagner": [date(2025, 10, 20), date(2025, 11, 17), date(2026, 3, 2)],
-}
-
-PLACEBO_NOTE: dict[str, str] = {
-    "wembanyama": "placebo invalid: out for season from Feb 2025",
-}
-
-
-def placebo_peak_uplift(weekly_views: pd.DataFrame, placebo_dates: list[date]) -> tuple[float, list[dict]]:
-    """Median peak_uplift across the placebo weeks, plus per-week detail."""
-    details = []
-    for d in placebo_dates:
-        week = week_start_of(d)
-        metrics = compute_metrics(weekly_views, week)
-        details.append({"week": week.date(), **metrics})
-    uplifts = [row["peak_uplift"] for row in details if pd.notna(row["peak_uplift"])]
-    median_uplift = float(pd.Series(uplifts).median()) if uplifts else float("nan")
-    return median_uplift, details
-
-
-# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -411,7 +373,6 @@ def main() -> None:
     weekly_df = pd.read_parquet(WEEKLY_PARQUET)
 
     rows = []
-    placebo_detail_by_player: dict[str, list[dict]] = {}
     for event in EVENTS:
         event_week = week_start_of(event.event_start)
 
@@ -425,10 +386,7 @@ def main() -> None:
                     "article": topic,
                     "lang": event.lang,
                     **topic_metrics[topic],
-                    "placebo_peak_uplift": float("nan"),
-                    "event_vs_placebo": float("nan"),
                     "verdict": "",
-                    "note": "",
                 }
             )
 
@@ -443,35 +401,22 @@ def main() -> None:
                     {
                         "event": event.event_name, "article": player.input_title, "lang": player.lang,
                         "baseline_views": float("nan"), "peak_uplift": float("nan"), "extra_views": float("nan"),
-                        "placebo_peak_uplift": float("nan"), "event_vs_placebo": float("nan"),
-                        "verdict": "UNVERIFIED (no pageviews data)", "note": "",
+                        "verdict": "UNVERIFIED (no pageviews data)",
                     }
                 )
                 continue
             metrics = compute_metrics(weekly, event_week)
-            placebo_median, placebo_detail = placebo_peak_uplift(weekly, PLACEBO_WEEKS[player.slug])
-            if placebo_detail:
-                placebo_detail_by_player[player.slug] = placebo_detail
-            event_vs_placebo = (
-                metrics["peak_uplift"] / placebo_median
-                if pd.notna(metrics["peak_uplift"]) and pd.notna(placebo_median) and placebo_median > 0
-                else float("nan")
-            )
             verdict = classify(metrics["peak_uplift"], league_peak_uplift)
             rows.append(
                 {
                     "event": event.event_name, "article": player.input_title, "lang": player.lang,
-                    **metrics, "placebo_peak_uplift": placebo_median, "event_vs_placebo": event_vs_placebo,
-                    "verdict": verdict, "note": PLACEBO_NOTE.get(player.slug, ""),
+                    **metrics, "verdict": verdict,
                 }
             )
 
     table = pd.DataFrame(
         rows,
-        columns=[
-            "event", "article", "lang", "baseline_views", "peak_uplift", "extra_views",
-            "placebo_peak_uplift", "event_vs_placebo", "verdict", "note",
-        ],
+        columns=["event", "article", "lang", "baseline_views", "peak_uplift", "extra_views", "verdict"],
     )
     table.to_csv(STAR_TEST_CSV, index=False)
 
@@ -480,17 +425,6 @@ def main() -> None:
         res, method = resolutions[player.slug], methods[player.slug]
         status = "MISSING" if res.missing else res.canonical_title
         print(f"  {player.lang}:{player.input_title} -> {status}  [{method}]")
-
-    print("\n=== Placebo weeks chosen ===")
-    for player in PLAYERS:
-        if player.slug in PLACEBO_NOTE:
-            print(f"  {player.input_title}: SKIPPED -- {PLACEBO_NOTE[player.slug]}")
-            continue
-        if player.slug not in placebo_detail_by_player:
-            continue
-        print(f"  {player.input_title} ({', '.join(d.isoformat() for d in PLACEBO_WEEKS[player.slug])}):")
-        for row in placebo_detail_by_player[player.slug]:
-            print(f"    week of {row['week']}: baseline={row['baseline_views']:.1f}  peak_uplift={row['peak_uplift']*100:+.1f}%")
 
     print("\n=== star_test.csv ===")
     print(table.to_string(index=False))

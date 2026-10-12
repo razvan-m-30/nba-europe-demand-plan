@@ -13,7 +13,7 @@ Main deliverable: a memo a non-technical reader can follow (recommendation first
 - Never invent data, dates, article titles or sources. If unverifiable, write UNVERIFIED and flag it.
 - Anything that needs a judgement call goes in `docs/decision_log.md` as one row: Date | Decision | Why. Keep it short.
 - End every task with a short summary: files changed, key numbers, anything flagged.
-- Out of scope: survey, Google Trends, Greece, seasonality check, AI log.
+- Out of scope: survey, Google Trends, Greece, seasonality check, AI log, placebo checks and further side analyses; keep the project understandable in 2 minutes.
 
 ## Data decisions (already made)
 - Source: Wikipedia pageviews only (user agent), 14 series = 7 languages x Basketball + NBA. Titles are canonical (see `data/raw/titles.csv`).
@@ -21,8 +21,8 @@ Main deliverable: a memo a non-technical reader can follow (recommendation first
 - Index: each series' 2019 average weekly views = 100.
 - Gaps: runs of 1-2 missing days filled with 0. Runs of 3+ left NULL, week flagged `incomplete` (it/nba, July 2026).
 - Outliers: daily views capped at 5x the trailing 8-week median. Capped days listed in `outputs/capped_days.csv`.
-- Baseline: median of 8 pre-event weeks.
-- Control: median uplift of markets not exposed to the event, week by week; NL counts as exposed for the Paris Olympics; NL-only kept as a secondary check.
+- Baseline: median of the 8 full weeks before the event.
+- Control: median uplift of markets not exposed to the event, week by week (NL counts as exposed for the Paris Olympics).
 - Turkey is kept (2019 baseline is stable, ~270 views/wk).
 - Jan 2020 is a confound (Kobe Bryant's death). Do not use it in baselines.
 
@@ -35,3 +35,4 @@ Main deliverable: a memo a non-technical reader can follow (recommendation first
 - Known confounds: Paris 2025 overlaps the Wembanyama effect; Berlin 2026 has the Wagner brothers; the Olympics carry a host halo.
 - Results are expressed as % above the baseline demand plan, never as units. Interest is a proxy for attention, not sales; the interest-to-demand conversion is an explicit assumption and is tested at 2+ values.
 - Limitations to state: a Wikipedia language edition is not a country (English, Spanish especially); no sustained European NBA league has existed.
+- Scenarios: low/base/high = Paris/Berlin/London net peak (low floored at 0), demand = interest × k (0.25, 0.5), probabilities 40/40/20, same for all six markets.

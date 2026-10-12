@@ -15,57 +15,19 @@ NBA Europe has no demand history: a sustained NBA-backed league has never operat
 | FIBA World Cup 2023 | 25 August – 10 September 2023 | Germany | National-team event |
 | EuroBasket 2025 | 27 August – 14 September 2025 | Turkey | National-team event |
 
-## How the method was refined
-
-Three issues surfaced while building this analysis, and are reflected in the numbers below.
-
-**1. Wembanyama draft: no measurable short-term effect.** Its 8-week pre-event baseline had averaged in an unrelated May 2023 French domestic-league spike, inflating the baseline so every later week looked like a decline; using the median of the 8 weeks instead of the mean fixed that (peak uplift: -48.8% → -44.2%). But the corrected number still isn't a real signal: the draft falls at the seasonal low point right after the May league finals, and a slow, season-long build from a star playing weekly is not something this event-study method can capture. It is excluded from scenario inputs.
-
-**2. Paris Olympics showed France below its control.** The control market, the Netherlands, wasn't neutral. Dutch interest peaked on 6 August, the day after the Netherlands won 3x3 gold, and stayed high through the Olympic basketball finals. We reclassified the Netherlands as exposed, a call made after seeing the data rather than before. Fix: net France's peak against markets not exposed to the Games. Net peak uplift: -114.1% → +217.9%.
-
-**3. One control market is fragile.** Relying on the Netherlands alone meant every event's net number rode on one country's noise. Fix: use the median uplift across all unexposed markets instead. For the Berlin NBA game, net peak uplift: -30.8% → +26.1%.
-
-These corrections changed several net numbers substantially, but not the main finding: national-team success still produces far larger uplifts than any single NBA event.
-
-## Results
-
-Basketball topic, exposed market only.
-
-| Event | Exposed market | Peak uplift | Half-life | Persistence (12w) | Net peak | Net persistence |
-|---|---|---|---|---|---|---|
-| Wembanyama draft (excluded, see above) | France | -44.2% | 1 week | -43.9% | -7.1% | -13.4% |
-| NBA Paris Game | France | +7.3% | 1 week | -28.4% | -11.2% | -4.3% |
-| NBA Berlin Game | Germany | +27.3% | 2 weeks | +6.4% | +26.1% | +17.3% |
-| NBA London Game | UK | +26.9% | 3 weeks | -11.8% | +30.6% | -2.4% |
-| Paris 2024 Olympics | France | +334.5% | 1 week | +102.7% | +217.9% | +106.3% |
-| Paris 2024 Olympics | Netherlands | +402.4% | 1 week | -22.7% | +285.8% | -19.0% |
-| FIBA World Cup 2023 | Germany | +268.2% | 1 week | +83.4% | +228.5% | -33.8% |
-| EuroBasket 2025 | Turkey | +491.3% | 5 weeks | +323.7% | +443.6% | +270.2% |
-
-Every national-team event produced a net peak at least seven times larger than any NBA event (+218% at minimum vs +31% at most). Whether the uplift lasts is less clear: 12-week persistence is high for France and Turkey, negative for Germany, and partly seasonal. Half-lives are short in both groups: most uplift fades within one to three weeks.
-
-## Scenarios
-
-| Scenario | k = 0.25 | k = 0.5 |
-|---|---|---|
-| Low (Paris) | 0.0% | 0.0% |
-| Base (Berlin) | +6.5% | +13.1% |
-| High (London) | +7.7% | +15.3% |
-| Expected (25/50/25) | +5.2% | +10.4% |
-
-Each scenario assumes the league lifts basketball interest the way that NBA game did, for the whole season, not just the weeks measured. k is the share of that extra interest assumed to convert into extra purchases; there is no public data linking Wikipedia interest to sales, so two values are tested. Even k = 0.5 is generous: the games themselves left almost nothing measurable after 12 weeks, which is why k stays well below 1 and why the buy recommendation that follows sits below the base case. The same numbers apply to all six markets — only France, Germany and the UK have their own measured game, so the data supports a shared European uplift rather than country-by-country differences. These figures cover category demand only, not player-specific product such as signature shoes and jerseys.
-
 ## Reading the results with care
 
 Each analog carries a known bias, and the analysis corrects for it where possible:
 
-- **The star effect.** Around the Paris and Berlin games, most of the extra attention went to the home players rather than to basketball in general: Wembanyama's page gained 268,566 extra views against 9,774 for the NBA page, and the Wagner brothers' pages show the same pattern. In an ordinary week without a European game, the Wagner brothers' pages gained only 18–20%, versus 783–985% during the Berlin week, so almost all of that spike is specific to the European game, not routine week-to-week noise. A comparison week could not be measured for Wembanyama, who was out for the season from February 2025, so this check rests on the Wagner brothers. Star attention did not spill over into the wider category: London, with no local star, saw the strongest basketball uplift (+31% net) and Paris, with the biggest star, the weakest (−11%). The plan therefore separates category demand (what the scenarios below measure) from player-specific demand such as signature shoes and jerseys, which concentrates on local stars.
+- **The star effect.** Around the Paris and Berlin games, most extra attention went to the home players' own pages rather than to basketball in general, so the scenarios below cover category demand only, not player-specific product.
 - **Olympic halo.** Interest during Paris 2024 was lifted by the Games as a whole; France's and the Netherlands' basketball success both contributed. This analog is best treated as an upper bound.
 - **Seasonality.** The draft falls in the off-season, while the European games fall mid-season. All uplifts are measured against each market's own pre-event baseline, and net figures are measured against the median of markets not exposed to that event.
 
 ## Forward context
 
 The NBA has already committed to regular-season games in Manchester and Paris in 2027 and in Berlin and Paris in 2028. Demand in these markets is therefore likely to be lifted by one-off games alongside the league launch. The plan accounts for this rather than attributing all uplift to the league.
+
+Full method and results: see docs/methodology.md in the repository.
 
 ---
 

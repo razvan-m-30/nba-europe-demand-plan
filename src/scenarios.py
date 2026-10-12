@@ -1,5 +1,5 @@
 """Step 4: translate the three NBA-game net uplifts into low/base/high demand
-scenarios per host market."""
+scenarios. Same numbers for every host market."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Font
 
 ROOT = Path(__file__).resolve().parent.parent
 ANALOGS_CSV = ROOT / "outputs" / "analogs_table.csv"
@@ -21,10 +21,9 @@ EXPECTED_NET_PEAK = {"N2": -0.112, "N3": 0.261, "N4": 0.306}
 TOLERANCE = 0.005  # 0.5 percentage points
 
 K_VALUES = [0.25, 0.5]
-PROBABILITIES = {"low": 0.25, "base": 0.50, "high": 0.25}  # judgement call, not derived from data
+PROBABILITIES = {"low": 0.40, "base": 0.40, "high": 0.20}  # judgement call, not derived from data
 
 COUNTRIES = ["UK", "France", "Spain", "Italy", "Germany", "Turkey"]
-OWN_EVENT_COUNTRIES = {"France", "Germany", "UK"}
 
 
 def load_interest_uplifts() -> tuple[dict, list[tuple]]:
@@ -70,39 +69,43 @@ def load_interest_uplifts() -> tuple[dict, list[tuple]]:
     return result, floor_log
 
 
+def expected_interest_uplift(interest: dict) -> float:
+    return sum(interest[s]["interest_uplift"] * PROBABILITIES[s] for s in ("low", "base", "high"))
+
+
 def build_scenarios_table(interest: dict) -> pd.DataFrame:
+    """k, scenario, interest_uplift, demand_uplift, probability -- same numbers
+    for every host market, so no country column. One "expected" row per k
+    (the probability-weighted average; probability left blank since it's not
+    one of the three mutually exclusive scenarios)."""
+    expected_interest = expected_interest_uplift(interest)
     rows = []
-    for country in COUNTRIES:
-        own_event = country in OWN_EVENT_COUNTRIES
-        for scenario, info in interest.items():
-            for k in K_VALUES:
-                rows.append(
-                    {
-                        "country": country,
-                        "own_event": own_event,
-                        "scenario": scenario,
-                        "source_event": info["event_name"],
-                        "interest_uplift": info["interest_uplift"],
-                        "k": k,
-                        "demand_uplift": info["interest_uplift"] * k,
-                        "probability": PROBABILITIES[scenario],
-                    }
-                )
-    return pd.DataFrame(
-        rows,
-        columns=[
-            "country", "own_event", "scenario", "source_event",
-            "interest_uplift", "k", "demand_uplift", "probability",
-        ],
-    )
-
-
-def expected_demand_uplift(interest: dict, k: float) -> float:
-    return sum(interest[s]["interest_uplift"] * k * PROBABILITIES[s] for s in ("low", "base", "high"))
+    for k in K_VALUES:
+        for scenario in ("low", "base", "high"):
+            info = interest[scenario]
+            rows.append(
+                {
+                    "k": k,
+                    "scenario": scenario,
+                    "interest_uplift": info["interest_uplift"],
+                    "demand_uplift": info["interest_uplift"] * k,
+                    "probability": PROBABILITIES[scenario],
+                }
+            )
+        rows.append(
+            {
+                "k": k,
+                "scenario": "expected",
+                "interest_uplift": expected_interest,
+                "demand_uplift": expected_interest * k,
+                "probability": "",
+            }
+        )
+    return pd.DataFrame(rows, columns=["k", "scenario", "interest_uplift", "demand_uplift", "probability"])
 
 
 # ---------------------------------------------------------------------------
-# Excel output
+# Excel output -- one sheet, "Scenarios": one small table per k.
 # ---------------------------------------------------------------------------
 
 PCT_FORMAT = "0.0%"
@@ -111,101 +114,40 @@ HEADER_FONT = Font(bold=True)
 
 def write_scenarios_sheet(ws, interest: dict) -> None:
     ws.title = "Scenarios"
-    ws.append(["Demand uplift by country and scenario (basketball category, vs. baseline plan)"])
+    ws["A1"] = "Demand uplift by scenario (basketball category, vs. baseline plan)"
     ws["A1"].font = Font(bold=True, size=12)
+
+    expected_interest = expected_interest_uplift(interest)
     row = 3
     for k in K_VALUES:
         ws.cell(row=row, column=1, value=f"k = {k}").font = HEADER_FONT
         row += 1
-        headers = ["Country", "Own event", "Low", "Base", "High", "Expected"]
-        for col, h in enumerate(headers, start=1):
-            cell = ws.cell(row=row, column=col, value=h)
-            cell.font = HEADER_FONT
+        for col, h in enumerate(["Low", "Base", "High", "Expected"], start=1):
+            ws.cell(row=row, column=col, value=h).font = HEADER_FONT
         row += 1
-        expected = expected_demand_uplift(interest, k)
-        for country in COUNTRIES:
-            own_event = country in OWN_EVENT_COUNTRIES
-            ws.cell(row=row, column=1, value=country)
-            ws.cell(row=row, column=2, value=own_event)
-            for col, scenario in zip((3, 4, 5), ("low", "base", "high")):
-                cell = ws.cell(row=row, column=col, value=interest[scenario]["interest_uplift"] * k)
-                cell.number_format = PCT_FORMAT
-            cell = ws.cell(row=row, column=6, value=expected)
+        for col, scenario in zip((1, 2, 3), ("low", "base", "high")):
+            cell = ws.cell(row=row, column=col, value=interest[scenario]["interest_uplift"] * k)
             cell.number_format = PCT_FORMAT
-            row += 1
-        row += 1  # blank row between the two k blocks
+        cell = ws.cell(row=row, column=4, value=expected_interest * k)
+        cell.number_format = PCT_FORMAT
+        row += 1
+        ws.cell(
+            row=row, column=1,
+            value=(
+                f"k = share of extra interest assumed to convert to extra purchases. "
+                f"Expected = {PROBABILITIES['low']*100:.0f}% low / {PROBABILITIES['base']*100:.0f}% base / "
+                f"{PROBABILITIES['high']*100:.0f}% high (judgement call)."
+            ),
+        )
+        row += 2  # blank row between the two k blocks
 
-    widths = {"A": 12, "B": 12, "C": 10, "D": 10, "E": 10, "F": 10}
-    for col, width in widths.items():
+    for col, width in {"A": 42, "B": 12, "C": 12, "D": 12}.items():
         ws.column_dimensions[col].width = width
 
 
-def write_assumptions_sheet(ws, interest: dict, floor_log: list[tuple]) -> None:
-    ws.title = "Assumptions"
-    headers = ["Assumption", "Value", "Explanation"]
-    for col, h in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col, value=h)
-        cell.font = HEADER_FONT
-
-    low, base, high = interest["low"], interest["base"], interest["high"]
-    floor_note = " (floored from {:.1f}%)".format(low["raw_net_peak_uplift"] * 100) if low["floored"] else ""
-    rows = [
-        (
-            "Low scenario source",
-            f"{low['event_name']} ({low['country']}): {low['interest_uplift'] * 100:.1f}%{floor_note}",
-            "Weakest-performing NBA game; net uplift was negative, so it's floored at 0% (see floor rule below)",
-        ),
-        (
-            "Base scenario source",
-            f"{base['event_name']} ({base['country']}): {base['interest_uplift'] * 100:.1f}%",
-            "Middle-performing NBA game; used as the base case",
-        ),
-        (
-            "High scenario source",
-            f"{high['event_name']} ({high['country']}): {high['interest_uplift'] * 100:.1f}%",
-            "Best-performing NBA game; used as the upside case",
-        ),
-        (
-            "Negative value floor",
-            "0%",
-            "A league is unlikely to reduce category demand, so a negative net uplift is treated as no effect, not a decline",
-        ),
-        (
-            "Interest-to-demand conversion (k)",
-            "0.25 and 0.5",
-            "Share of extra Wikipedia interest assumed to convert to extra purchases; no public data exists, so two values are tested",
-        ),
-        (
-            "Scenario probabilities",
-            "low 25%, base 50%, high 25%",
-            "Judgement call, not derived from data; weights the three NBA games into one expected case",
-        ),
-        (
-            "Same numbers for all countries",
-            "UK, France, Spain, Italy, Germany, Turkey",
-            "Only 3 of 6 markets have their own measured game; the data supports a shared European uplift, not country-by-country differences",
-        ),
-        (
-            "Netherlands excluded",
-            "n/a",
-            "No planned NBA franchise, so not part of the demand plan",
-        ),
-    ]
-    for i, (assumption, value, explanation) in enumerate(rows, start=2):
-        ws.cell(row=i, column=1, value=assumption)
-        ws.cell(row=i, column=2, value=value)
-        c = ws.cell(row=i, column=3, value=explanation)
-        c.alignment = Alignment(wrap_text=True, vertical="top")
-
-    ws.column_dimensions["A"].width = 28
-    ws.column_dimensions["B"].width = 36
-    ws.column_dimensions["C"].width = 70
-
-
-def write_plan_xlsx(interest: dict, floor_log: list[tuple]) -> None:
+def write_plan_xlsx(interest: dict) -> None:
     wb = Workbook()
     write_scenarios_sheet(wb.active, interest)
-    write_assumptions_sheet(wb.create_sheet(), interest, floor_log)
     wb.save(PLAN_XLSX)
 
 
@@ -223,19 +165,17 @@ def print_summary(interest: dict, floor_log: list[tuple], scenarios_df: pd.DataF
         for scenario, event_id, event_name, country, raw in floor_log:
             print(f"  {scenario} ({event_id} {event_name}, {country}): {raw * 100:+.2f}% -> 0.0%")
 
-    print("\n=== Expected (probability-weighted) demand uplift ===")
-    for k in K_VALUES:
-        print(f"  k={k}: {expected_demand_uplift(interest, k) * 100:.2f}%")
-
+    expected_interest = expected_interest_uplift(interest)
     print("\n=== Scenario table (same for all 6 countries) ===")
     for k in K_VALUES:
         print(f"\nk = {k}")
         for scenario in ("low", "base", "high"):
             info = interest[scenario]
             print(
-                f"  {scenario:<5} demand_uplift={info['interest_uplift'] * k * 100:+.2f}%  "
+                f"  {scenario:<8} demand_uplift={info['interest_uplift'] * k * 100:+.2f}%  "
                 f"(probability={PROBABILITIES[scenario] * 100:.0f}%)"
             )
+        print(f"  {'expected':<8} demand_uplift={expected_interest * k * 100:+.2f}%")
 
     print(f"\nRows written to {SCENARIOS_CSV.relative_to(ROOT)}: {len(scenarios_df)}")
 
@@ -244,7 +184,7 @@ def main() -> None:
     interest, floor_log = load_interest_uplifts()
     scenarios_df = build_scenarios_table(interest)
     scenarios_df.to_csv(SCENARIOS_CSV, index=False)
-    write_plan_xlsx(interest, floor_log)
+    write_plan_xlsx(interest)
     print_summary(interest, floor_log, scenarios_df)
 
 
