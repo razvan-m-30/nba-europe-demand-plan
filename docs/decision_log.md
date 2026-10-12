@@ -26,3 +26,4 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-10-12 | Star vs league test run on player pages (Wagner, Wembanyama) | Separate home-hero attention from league attention in N2/N3 |
 | 2026-10-12 | Category demand and player demand treated as separate channels | Star attention did not lift basketball interest (London strongest, Paris weakest) |
 | 2026-10-12 | Scenarios = Paris/Berlin/London games; k = 0.25, 0.5; probabilities 40/40/20 | Simplest mapping; games showed little persistence, so weight tilted to low |
+| 2026-10-12 | Buy rule: Cu = gross margin, Co = markdown depth (30%, 50%), buy at critical-ratio scenario | Simplest newsvendor form; everything stays in % above plan |
