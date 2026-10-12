@@ -244,10 +244,17 @@ def plot_event_chart(weekly: pd.DataFrame, event: Event, out_path: Path) -> None
     end_offset = (end_week - event_week).days / 7
     ax.axvspan(0, end_offset + 1, color="#c3c2b7", alpha=0.25, zorder=0)
 
+    # Every line (exposed, other, control) is rebased to that country's own
+    # 8-week pre-event baseline = 100, so vertical position is directly
+    # comparable across lines -- "above the control" means "beating the
+    # control's uplift that week," matching net_peak_uplift in the table.
     other_line = None
     color_i = 0
     for country in COUNTRIES:
-        values = [series_map[country]["index"].get(wk) for wk in weeks]
+        values = [
+            100 * (1 + safe_uplift(series_map[country]["index"].get(wk), baselines[country]))
+            for wk in weeks
+        ]
         if country in event.exposed_countries:
             color = EXPOSED_COLORS[color_i % len(EXPOSED_COLORS)]
             color_i += 1
@@ -259,9 +266,8 @@ def plot_event_chart(weekly: pd.DataFrame, event: Event, out_path: Path) -> None
     if other_line is not None:
         other_line.set_label("Other markets")
 
-    # Control: median uplift across unexposed markets, displayed as a synthetic
-    # index (100 x (1 + uplift)) so it sits on the same baseline=100 scale as
-    # every country's own index line.
+    # Control: median uplift across unexposed markets, displayed the same way
+    # (100 x (1 + uplift)) as every country line above.
     control_display = [
         100 * (1 + control_uplift_at(wk, event, "basketball", series_map, baselines))
         for wk in weeks
@@ -278,7 +284,7 @@ def plot_event_chart(weekly: pd.DataFrame, event: Event, out_path: Path) -> None
     ax.set_yscale("log")
     ax.set_title(f"{event.event_name} -- {date_label}", color="#0b0b0b")
     ax.set_xlabel("Weeks relative to event start", color="#52514e")
-    ax.set_ylabel("Basketball index (2019 weekly avg = 100, log scale)", color="#52514e")
+    ax.set_ylabel("Index vs. own 8-week pre-event baseline = 100 (log scale)", color="#52514e")
     ax.grid(True, which="major", color="#e1e0d9", linewidth=0.8)
     ax.grid(True, which="minor", color="#e1e0d9", linewidth=0.4)
     ax.spines[["top", "right"]].set_visible(False)
