@@ -26,3 +26,8 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-10-12 | Star vs league test run on player pages (Wagner, Wembanyama) | Separate home-hero attention from league attention in N2/N3 |
 | 2026-10-12 | Category demand and player demand treated as separate channels | Star attention did not lift basketball interest (London strongest, Paris weakest) |
 | 2026-10-12 | Placebo weeks added to star test | Player pages spike after any big game; isolates the European-game effect |
+| 2026-10-12 | Wembanyama placebo dropped | Out for season from Feb 2025; comparison weeks contaminated |
+| 2026-10-12 | Scenarios = the three NBA games (low Paris, base Berlin, high London) | Simplest mapping; each scenario = "league behaves like that game" |
+| 2026-10-12 | Negative low case floored at 0% | A league is unlikely to reduce category demand |
+| 2026-10-12 | k = 0.25 and 0.5 tested | No public data links interest to sales; two values show sensitivity |
+| 2026-10-12 | Same scenario numbers for all six markets | Only 3 of 6 markets have their own measured game |

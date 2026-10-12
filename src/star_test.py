@@ -345,14 +345,20 @@ def classify(player_peak_uplift: float, league_peak_uplift: float) -> str:
 # ---------------------------------------------------------------------------
 
 PLACEBO_WEEKS: dict[str, list[date]] = {
-    # N2 event week is 2025-01-20; season 2024-25. Pre-event safe window is
-    # only Dec 1-22 (narrow, and still close to the trade-deadline/All-Star
-    # run-up), so all 3 are picked well after the Feb 17 buffer instead.
-    "wembanyama": [date(2025, 3, 3), date(2025, 3, 17), date(2025, 3, 31)],
+    # Originally 2025-03-03/17/31, but Wembanyama was ruled out for the rest
+    # of the season on 2025-02-20 (deep vein thrombosis, diagnosed right
+    # after All-Star weekend) -- confirmed via web search. He wasn't playing
+    # in any of those weeks, and the injury-news spike sits inside their
+    # 8-week baseline windows, so they're invalid. See PLACEBO_NOTE.
+    "wembanyama": [],
     # N3 event week is 2026-01-12; season 2025-26. Picked from well before
     # the Dec 15 buffer (early/mid season) and once after the Feb 9 buffer.
     "franz_wagner": [date(2025, 10, 20), date(2025, 11, 17), date(2026, 3, 2)],
     "moritz_wagner": [date(2025, 10, 20), date(2025, 11, 17), date(2026, 3, 2)],
+}
+
+PLACEBO_NOTE: dict[str, str] = {
+    "wembanyama": "placebo invalid: out for season from Feb 2025",
 }
 
 
@@ -422,6 +428,7 @@ def main() -> None:
                     "placebo_peak_uplift": float("nan"),
                     "event_vs_placebo": float("nan"),
                     "verdict": "",
+                    "note": "",
                 }
             )
 
@@ -437,13 +444,14 @@ def main() -> None:
                         "event": event.event_name, "article": player.input_title, "lang": player.lang,
                         "baseline_views": float("nan"), "peak_uplift": float("nan"), "extra_views": float("nan"),
                         "placebo_peak_uplift": float("nan"), "event_vs_placebo": float("nan"),
-                        "verdict": "UNVERIFIED (no pageviews data)",
+                        "verdict": "UNVERIFIED (no pageviews data)", "note": "",
                     }
                 )
                 continue
             metrics = compute_metrics(weekly, event_week)
             placebo_median, placebo_detail = placebo_peak_uplift(weekly, PLACEBO_WEEKS[player.slug])
-            placebo_detail_by_player[player.slug] = placebo_detail
+            if placebo_detail:
+                placebo_detail_by_player[player.slug] = placebo_detail
             event_vs_placebo = (
                 metrics["peak_uplift"] / placebo_median
                 if pd.notna(metrics["peak_uplift"]) and pd.notna(placebo_median) and placebo_median > 0
@@ -454,7 +462,7 @@ def main() -> None:
                 {
                     "event": event.event_name, "article": player.input_title, "lang": player.lang,
                     **metrics, "placebo_peak_uplift": placebo_median, "event_vs_placebo": event_vs_placebo,
-                    "verdict": verdict,
+                    "verdict": verdict, "note": PLACEBO_NOTE.get(player.slug, ""),
                 }
             )
 
@@ -462,7 +470,7 @@ def main() -> None:
         rows,
         columns=[
             "event", "article", "lang", "baseline_views", "peak_uplift", "extra_views",
-            "placebo_peak_uplift", "event_vs_placebo", "verdict",
+            "placebo_peak_uplift", "event_vs_placebo", "verdict", "note",
         ],
     )
     table.to_csv(STAR_TEST_CSV, index=False)
@@ -475,6 +483,9 @@ def main() -> None:
 
     print("\n=== Placebo weeks chosen ===")
     for player in PLAYERS:
+        if player.slug in PLACEBO_NOTE:
+            print(f"  {player.input_title}: SKIPPED -- {PLACEBO_NOTE[player.slug]}")
+            continue
         if player.slug not in placebo_detail_by_player:
             continue
         print(f"  {player.input_title} ({', '.join(d.isoformat() for d in PLACEBO_WEEKS[player.slug])}):")

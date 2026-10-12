@@ -44,11 +44,22 @@ Basketball topic, exposed market only.
 
 Every national-team event produced a net peak at least seven times larger than any NBA event (+218% at minimum vs +31% at most). Whether the uplift lasts is less clear: 12-week persistence is high for France and Turkey, negative for Germany, and partly seasonal. Half-lives are short in both groups: most uplift fades within one to three weeks.
 
+## Scenarios
+
+| Scenario | k = 0.25 | k = 0.5 |
+|---|---|---|
+| Low (Paris) | 0.0% | 0.0% |
+| Base (Berlin) | +6.5% | +13.1% |
+| High (London) | +7.7% | +15.3% |
+| Expected (25/50/25) | +5.2% | +10.4% |
+
+Each scenario assumes the league lifts basketball interest the way that NBA game did, for the whole season, not just the weeks measured. k is the share of that extra interest assumed to convert into extra purchases; there is no public data linking Wikipedia interest to sales, so two values are tested. Even k = 0.5 is generous: the games themselves left almost nothing measurable after 12 weeks, which is why k stays well below 1 and why the buy recommendation that follows sits below the base case. The same numbers apply to all six markets — only France, Germany and the UK have their own measured game, so the data supports a shared European uplift rather than country-by-country differences. These figures cover category demand only, not player-specific product such as signature shoes and jerseys.
+
 ## Reading the results with care
 
 Each analog carries a known bias, and the analysis corrects for it where possible:
 
-- **The star effect.** Around the Paris and Berlin games, most of the extra attention went to the home players rather than to basketball in general: Wembanyama's page gained 268,566 extra views against 9,774 for the NBA page, and the Wagner brothers' pages show the same pattern. In an ordinary week without a European game, the same pages rose far less — the Wagner brothers' pages gained only 18–20%, versus 783–985% during the Berlin week, and Wembanyama's page showed no ordinary-week spike at all (if anything, a decline), so almost all of the measured spike is specific to the European game, not routine week-to-week noise. Star attention did not spill over into the wider category: London, with no local star, saw the strongest basketball uplift (+31% net) and Paris, with the biggest star, the weakest (−11%). The plan therefore separates category demand (what the scenarios below measure) from player-specific demand such as signature shoes and jerseys, which concentrates on local stars.
+- **The star effect.** Around the Paris and Berlin games, most of the extra attention went to the home players rather than to basketball in general: Wembanyama's page gained 268,566 extra views against 9,774 for the NBA page, and the Wagner brothers' pages show the same pattern. In an ordinary week without a European game, the Wagner brothers' pages gained only 18–20%, versus 783–985% during the Berlin week, so almost all of that spike is specific to the European game, not routine week-to-week noise. A comparison week could not be measured for Wembanyama, who was out for the season from February 2025, so this check rests on the Wagner brothers. Star attention did not spill over into the wider category: London, with no local star, saw the strongest basketball uplift (+31% net) and Paris, with the biggest star, the weakest (−11%). The plan therefore separates category demand (what the scenarios below measure) from player-specific demand such as signature shoes and jerseys, which concentrates on local stars.
 - **Olympic halo.** Interest during Paris 2024 was lifted by the Games as a whole; France's and the Netherlands' basketball success both contributed. This analog is best treated as an upper bound.
 - **Seasonality.** The draft falls in the off-season, while the European games fall mid-season. All uplifts are measured against each market's own pre-event baseline, and net figures are measured against the median of markets not exposed to that event.
 
