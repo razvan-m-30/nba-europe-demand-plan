@@ -48,7 +48,7 @@ Every national-team event produced a net peak at least seven times larger than a
 
 Each analog carries a known bias, and the analysis corrects for it where possible:
 
-- **The star effect.** The 2025 Paris games were Wembanyama's homecoming, and the 2026 Berlin game featured Germany's Franz and Moritz Wagner. Some of the local uplift therefore comes from national stars rather than from the NBA itself.
+- **The star effect.** A direct test compared each player's own Wikipedia page to the local basketball/NBA topic pages over the same weeks around the game: Victor Wembanyama's peak uplift was about 17x the French league pages' (268,600 extra views on his page vs. 9,800 on the NBA page), and Franz and Moritz Wagner's were about 15x and 19x the German league pages'. In both cases, attention went mainly to the star, not the event. London had no local British star to test, so it stands as the league-only reference case.
 - **Olympic halo.** Interest during Paris 2024 was lifted by the Games as a whole; France's and the Netherlands' basketball success both contributed. This analog is best treated as an upper bound.
 - **Seasonality.** The draft falls in the off-season, while the European games fall mid-season. All uplifts are measured against each market's own pre-event baseline, and net figures are measured against the median of markets not exposed to that event.
 
