@@ -24,3 +24,5 @@ Chronological record of key decisions made during this project, with rationale.
 | 2026-09-28 | Wembanyama draft excluded from scenario inputs | Falls at seasonal low; no measurable short-term effect |
 | 2026-10-12 | Event charts plot every line as 100 × (1 + uplift vs own 8-week baseline) | Charts mixed 2019-indexed countries with a baseline-indexed control; display bug only, numbers unchanged |
 | 2026-10-12 | Star vs league test run on player pages (Wagner, Wembanyama) | Separate home-hero attention from league attention in N2/N3 |
+| 2026-10-12 | Category demand and player demand treated as separate channels | Star attention did not lift basketball interest (London strongest, Paris weakest) |
+| 2026-10-12 | Placebo weeks added to star test | Player pages spike after any big game; isolates the European-game effect |
